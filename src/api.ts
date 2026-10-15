@@ -3,12 +3,22 @@ import { createServer } from 'node:http';
 import { randomInt } from 'node:crypto';
 import {v4 as uuidv4} from 'uuid';
 import PokemonService from "./services/pokeApiService.js";
+import pino from "pino";
 
+const logger = pino(pino.destination("./app.log"));
 const capturedHistory: number[] = [];
 let lastEncounter = 0;
 const pokemonService = new PokemonService();
-
 export const app: Express = express();
+
+app.use((req, res, next) => {
+    res.on("finish"
+        , () => {
+            logger.info({method: req.method, url: req.url, status: res.statusCode}, "requête");
+        });
+    next();
+})
+
 app.get("/hello", (req, res) => {
     res.send("Welcome to pokedex");
 })
@@ -27,19 +37,15 @@ app.get("/wild", async (req, res) => {
 
 app.post('/capture/:id', async (req, res) => {
     const id = req.params.id;
-    const luck = randomInt(1,100);
-    const captureRate = randomInt(1,100);
+    const luck = randomInt(1, 100);
+    const captureRate = randomInt(1, 100);
     res.setHeader('Content-Type', 'application/json');
 
-    if (Number(id) !== lastEncounter){
-        res.statusCode = 400;
-        res.end(JSON.stringify("This Pokémon was not the last encounter."));
-        return;
-    }
-
-    if (Number.isInteger(Number(id))) {
+    if (!(Number.isInteger(Number(id)) || Number(id) > 1025) || (Number(id) !== lastEncounter)) {
+        res.status(400).json("invalid id");
+    } else {
         res.statusCode = 200;
-        if (luck >= captureRate){
+        if (luck >= captureRate) {
             if (!capturedHistory.includes(Number(id))) {
                 capturedHistory.unshift(Number(id));
             }
@@ -58,7 +64,7 @@ app.post('/capture/:id', async (req, res) => {
             res.end(JSON.stringify(resultat));
             return;
         } else {
-            const resultat = { "success": false, "message": "Oh non ! Le Pokémon s'est échappé !" }
+            const resultat = {"success": false, "message": "Oh non ! Le Pokémon s'est échappé !"}
             res.statusCode = 200;
             res.end(JSON.stringify(resultat));
             return;
@@ -79,3 +85,17 @@ app.get("/pokedex", async (req, res) => {
     res.end(JSON.stringify(resultat));
     return;
 });
+
+app.all("/wild", (req, res) => {
+    res.status(405).json({error: 'Unauthorized Method'});
+})
+
+app.all("/capture/:id", (req, res) => {
+    res.status(405).json({error: 'Unauthorized Method'});
+})
+
+app.use(((req, res) => {
+    res.status(404).json({error: 'Route not found'});
+}))
+
+

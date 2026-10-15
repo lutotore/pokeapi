@@ -14,7 +14,6 @@ vi.mock("node:crypto", async (importOriginal) => {
 });
 
 import { server } from "../server.js";
-
 describe("PokemonService.callPoke", () => {
     it("returns the requested pokemon", async () => {
         const sut = new PokemonService();
@@ -47,7 +46,7 @@ describe("POST /capture/:id", () => {
         //
         //
         expect(response.status).toBe(400);
-        expect(response.body).toBe("This Pokémon was not the last encounter.");
+        expect(response.body).toBe("invalid id");
     });
 
     it("returns 201 and the captured pokemon when the capture succeeds", async () => {
@@ -84,5 +83,13 @@ describe("POST /capture/:id", () => {
         expect(response.status).toBe(200);
         expect(response.body).toMatchObject({"success": false, "message": "Oh non ! Le Pokémon s'est échappé !"})
 
+    })
+})
+
+describe("Erreur 404", () => {
+    it("returns 404 when route doesn't exist", async () => {
+        const sut = await request(server).get("/sut");
+        expect(sut.status).toBe(404);
+        expect(sut.body).toMatchObject({error: 'Route not found'})
     })
 })
