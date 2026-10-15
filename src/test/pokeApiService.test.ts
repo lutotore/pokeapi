@@ -46,7 +46,9 @@ describe("POST /capture/:id", () => {
         //
         //
         expect(response.status).toBe(400);
-        expect(response.body).toBe("invalid id");
+        expect(response.body).toEqual({
+            error: { code: 400, message: "Ce Pokémon n'a pas été rencontré" }
+        });
     });
 
     it("returns 201 and the captured pokemon when the capture succeeds", async () => {
@@ -90,6 +92,6 @@ describe("Erreur 404", () => {
     it("returns 404 when route doesn't exist", async () => {
         const sut = await request(server).get("/sut");
         expect(sut.status).toBe(404);
-        expect(sut.body).toMatchObject({error: 'Route not found'})
+        expect(sut.body.error.code).toBe(404);
     })
 })

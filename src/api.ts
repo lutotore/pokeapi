@@ -1,9 +1,9 @@
 import express, {type Express} from "express";
-import { createServer } from 'node:http';
 import { randomInt } from 'node:crypto';
 import {v4 as uuidv4} from 'uuid';
 import PokemonService from "./services/pokeApiService.js";
 import pino from "pino";
+import {errorHandler, methodeNotAllowed, notFound} from "./errorHandler.js";
 
 const logger = pino(pino.destination("./app.log"));
 const capturedHistory: number[] = [];
@@ -35,15 +35,14 @@ app.get("/wild", async (req, res) => {
 })
 
 
-app.post('/capture/:id', async (req, res) => {
+app.post('/capture/:id', async (req, res, next) => {
     const id = req.params.id;
     const luck = randomInt(1, 100);
     const captureRate = randomInt(1, 100);
     res.setHeader('Content-Type', 'application/json');
 
     if (!(Number.isInteger(Number(id)) || Number(id) > 1025) || (Number(id) !== lastEncounter)) {
-        res.status(400).json("invalid id");
-    } else {
+            return next({ code: 400, message: "Ce Pokémon n'a pas été rencontré" });    } else {
         res.statusCode = 200;
         if (luck >= captureRate) {
             if (!capturedHistory.includes(Number(id))) {
@@ -86,16 +85,10 @@ app.get("/pokedex", async (req, res) => {
     return;
 });
 
-app.all("/wild", (req, res) => {
-    res.status(405).json({error: 'Unauthorized Method'});
-})
+app.all("/wild", methodeNotAllowed);
+app.all("/capture/:id", methodeNotAllowed);
+app.all("/pokedex", methodeNotAllowed);
 
-app.all("/capture/:id", (req, res) => {
-    res.status(405).json({error: 'Unauthorized Method'});
-})
-
-app.use(((req, res) => {
-    res.status(404).json({error: 'Route not found'});
-}))
-
+app.use(notFound);
+app.use(errorHandler);   // toujours en dernier
 
